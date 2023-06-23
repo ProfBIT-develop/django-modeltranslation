@@ -73,3 +73,7 @@ JQUERY_UI_URL = getattr(
     "JQUERY_UI_URL",
     "//ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js",
 )
+
+MODELTRANSLATION_REQUIRED_LANGUAGES = tuple(getattr(
+    settings, "MODELTRANSLATION_REQUIRED_LANGUAGES", ()
+))
