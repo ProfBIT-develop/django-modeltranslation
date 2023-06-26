@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-
 TRANSLATION_FILES = tuple(getattr(settings, "MODELTRANSLATION_TRANSLATION_FILES", ()))
 
 AVAILABLE_LANGUAGES = list(
@@ -73,5 +72,3 @@ JQUERY_UI_URL = getattr(
     "JQUERY_UI_URL",
     "//ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js",
 )
-
-REQUIRED_LANGUAGES = tuple(getattr(settings, "MODELTRANSLATION_REQUIRED_LANGUAGES", ()))
