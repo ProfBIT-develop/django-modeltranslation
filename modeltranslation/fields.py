@@ -129,9 +129,10 @@ class TranslationField:
 
         # Take required_languages translation option into account
         trans_opts = translator.get_options_for_model(self.model)
+        required_languages = None
         if trans_opts.required_languages:
             required_languages = trans_opts.required_languages
-        else:
+        elif not self.translated_field.blank:
             required_languages = mt_settings.REQUIRED_LANGUAGES
         if required_languages:
             if isinstance(required_languages, (tuple, list)):
