@@ -8,9 +8,6 @@ from modeltranslation.utils import build_localized_fieldname
 COMMASPACE = ", "
 
 
-COMMASPACE = ", "
-
-
 class Command(BaseCommand):
     help = (
         'Updates empty values of translation fields using'
