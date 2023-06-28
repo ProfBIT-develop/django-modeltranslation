@@ -69,18 +69,61 @@ def append_fallback(model, fields):
     If translated field is encountered, add also all its fallback fields.
     Returns tuple: (set_of_new_fields_to_use, set_of_translated_field_names)
     """
-    fields = set(fields)
-    trans = set()
+    from django.db.models.constants import LOOKUP_SEP
     from modeltranslation.translator import translator
-
-    opts = translator.get_options_for_model(model)
+    from modeltranslation.translator import NotRegistered
+    from modeltranslation.utils import get_language, build_localized_fieldname
+    fields = list(fields)
+    trans = list()
+    fields_append = fields.append
+    fields_remove = fields.remove
+    fields_insert = fields.insert
+    fields_index = fields.index
+    trans_append = trans.append
+    try:
+        opts = translator.get_options_for_model(model)
+    except NotRegistered:
+        return fields, trans
+    for field in fields.copy():
+        part, *parts = field.split(LOOKUP_SEP)
+        rel_part = field
+        rel_model = model
+        while parts:
+            try:
+                model_field = rel_model._meta.get_field(part)
+            except Exception:
+                break
+            field_model = getattr(
+                model_field, 'related_model', None
+            )
+            if field_model:
+                rel_model = field_model
+                rel_part = LOOKUP_SEP.join(parts)
+                part, *parts = rel_part.split(LOOKUP_SEP)
+            else:
+                break
+        if rel_model and rel_model != model:
+            rel_fields, rel_trans = append_fallback(
+                rel_model, [rel_part])
+            if rel_trans:
+                not_changed_field_part = field[:-len(part)]
+                fields_remove(field)
+                trans_append(field)
+                for rel_field in rel_fields:
+                    fields_append(not_changed_field_part + rel_field)
     for key, _ in opts.fields.items():
         if key in fields:
-            langs = resolution_order(get_language(), getattr(model, key).fallback_languages)
-            fields = fields.union(build_localized_fieldname(key, lang) for lang in langs)
-            fields.remove(key)
-            trans.add(key)
-    return fields, trans
+            langs = resolution_order(
+                get_language(), getattr(model, key).fallback_languages)
+            index = fields_index(key)
+            for lang in langs:
+                d = build_localized_fieldname(key, lang)
+                if d not in fields:
+                    fields_insert(index + 1, d)
+                    index += 1
+            fields_remove(key)
+            trans_append(key)
+    return set(fields), trans
 
 
 def append_translated(model, fields):
@@ -500,11 +543,12 @@ class MultilingualQuerySet(QuerySet):
 
 
 class FallbackValuesIterable(ValuesIterable):
-    class X:
+    class X(object):
         # This stupid class is needed as object use __slots__ and has no __dict__.
         pass
 
     def __iter__(self):
+        from django.db.models.constants import LOOKUP_SEP
         instance = self.X()
 
         fields = self.queryset.original_fields
@@ -513,8 +557,27 @@ class FallbackValuesIterable(ValuesIterable):
         for row in super().__iter__():
             instance.__dict__.update(row)
             for key in self.queryset.translation_fields:
-                row[key] = getattr(self.queryset.model, key).__get__(instance, None)
-            # Restore original ordering.
+                if LOOKUP_SEP in key:
+                    field_part, *rel_parts = key.split(LOOKUP_SEP)
+                    model = self.queryset.model
+                    while rel_parts:
+                        try:
+                            model_field = model._meta.get_field(field_part)
+                        except:
+                            model_field = None
+                        model = model_field.related_model
+                        field_part, *rel_parts = rel_parts
+                    descriptor = getattr(model, field_part)
+                    old_name = descriptor.field.name
+                    # temporary change name of field
+                    descriptor.field.name = key
+                    row[key] = descriptor.__get__(instance, None)
+                    descriptor.field.name = old_name
+                else:
+                    row[key] = getattr(
+                        self.queryset.model, key).__get__(instance, None)
+            # for key in self.queryset.fields_to_del:
+            #     del row[key]
             yield {k: row[k] for k in fields}
 
 
