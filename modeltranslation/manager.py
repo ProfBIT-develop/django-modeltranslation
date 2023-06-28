@@ -573,8 +573,6 @@ class FallbackValuesIterable(ValuesIterable):
                     descriptor.field.name = old_name
                 else:
                     row[key] = getattr(self.queryset.model, key).__get__(instance, None)
-            # for key in self.queryset.fields_to_del:
-            #     del row[key]
             yield {k: row[k] for k in fields}
 
 
