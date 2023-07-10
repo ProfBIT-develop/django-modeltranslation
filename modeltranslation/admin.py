@@ -53,8 +53,7 @@ class TranslationBaseModelAdmin(BaseModelAdmin):
             if field.required:
                 field.required = False
                 field.blank = True
-                if not mt_settings.REQUIRED_LANGUAGES:
-                    self._orig_was_required['%s.%s' % (db_field.model._meta, db_field.name)] = True
+                self._orig_was_required['%s.%s' % (db_field.model._meta, db_field.name)] = True
 
         # For every localized field copy the widget from the original field
         # and add a css class to identify a modeltranslation widget.
