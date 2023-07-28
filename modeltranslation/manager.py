@@ -84,7 +84,7 @@ def append_fallback(model, fields):
     try:
         opts = translator.get_options_for_model(model)
     except NotRegistered:
-        return fields, trans
+        return set(fields), trans
     for field in fields.copy():
         part, *parts = field.split(LOOKUP_SEP)
         rel_part = field
